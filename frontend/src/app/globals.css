@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  @apply bg-white text-ink-900 antialiased;
+}
+
+/* Rich-text editor content */
+.rte:empty::before {
+  content: attr(data-placeholder);
+  @apply text-ink-400;
+}
+.rte ul { @apply list-disc pl-6; }
+.rte ol { @apply list-decimal pl-6; }
+.rte blockquote { @apply border-l-2 border-ink-300 pl-3 text-ink-500; }

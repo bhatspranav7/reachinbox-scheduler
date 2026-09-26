@@ -33,7 +33,7 @@ export async function ensureSenders(): Promise<Sender[]> {
   let count = (await db.select().from(schema.senders)).length;
   while (count < env.SENDER_COUNT && fromEnv.length === 0) {
     try {
-      const acc = await nodemailer.createTestAccount();
+      const acc = await createEtherealAccount();
       await db.insert(schema.senders).values({
         email: acc.user,
         name: `Sender ${count + 1}`,
@@ -43,7 +43,7 @@ export async function ensureSenders(): Promise<Sender[]> {
       logger.info({ sender: acc.user }, "provisioned Ethereal sender");
       count++;
     } catch (err) {
-      logger.error({ err: (err as Error).message }, "could not create Ethereal account – set ETHEREAL_SENDERS in .env");
+      logger.error({ err: (err as Error).message }, "could not create Ethereal account - set ETHEREAL_SENDERS in .env");
       break;
     }
   }
@@ -55,6 +55,21 @@ export async function ensureSenders(): Promise<Sender[]> {
 
 export async function listSenders() {
   return db.select().from(schema.senders).orderBy(asc(schema.senders.createdAt));
+}
+
+/**
+ * Creates a fresh Ethereal mailbox. (nodemailer.createTestAccount() caches the
+ * first account per process, so calling it N times would return the same one.)
+ */
+async function createEtherealAccount(): Promise<{ user: string; pass: string }> {
+  const res = await fetch("https://api.nodemailer.com/user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ requestor: "reachinbox-scheduler", version: "1.0.0" }),
+  });
+  const data = (await res.json()) as { status: string; user?: string; pass?: string; error?: string };
+  if (!res.ok || data.status !== "success" || !data.user || !data.pass) throw new Error(data.error ?? `Ethereal API returned ${res.status}`);
+  return { user: data.user, pass: data.pass };
 }
 
 const transports = new Map<string, Transporter>();

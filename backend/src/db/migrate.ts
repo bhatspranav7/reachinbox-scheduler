@@ -9,7 +9,7 @@ export async function runMigrations() {
 if (require.main === module) {
   runMigrations()
     .then(() => {
-      console.log("✅ migrations applied");
+      console.log("migrations applied");
       return pool.end();
     })
     .catch((err) => {

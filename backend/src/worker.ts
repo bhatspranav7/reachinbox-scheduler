@@ -16,7 +16,7 @@ async function main() {
   const worker = startEmailWorker();
 
   const shutdown = async () => {
-    logger.info("worker shutting down…");
+    logger.info("worker shutting down...");
     await worker.close();
     closeTransports();
     await redis.quit();

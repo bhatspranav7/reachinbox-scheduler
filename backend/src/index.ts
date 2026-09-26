@@ -22,13 +22,13 @@ async function main() {
   if (env.RUN_WORKER) worker = startEmailWorker();
 
   const server = createApp().listen(env.PORT, () => {
-    logger.info(`🚀 API on http://localhost:${env.PORT}  ·  queue dashboard on http://localhost:${env.PORT}/admin/queues`);
+    logger.info(`API on http://localhost:${env.PORT} | queue dashboard on http://localhost:${env.PORT}/admin/queues`);
   });
 
   // Graceful shutdown: stop taking jobs, let in-flight sends finish, then exit.
   // Delayed jobs stay in Redis and resume on the next start.
   const shutdown = async (signal: string) => {
-    logger.info({ signal }, "shutting down…");
+    logger.info({ signal }, "shutting down...");
     server.close();
     await worker?.close();
     await emailQueue.close();

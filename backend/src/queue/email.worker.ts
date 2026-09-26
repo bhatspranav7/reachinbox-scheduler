@@ -89,7 +89,7 @@ async function processEmail(job: Job<EmailJobData>, token?: string) {
     if (r.limitedBy) {
       // Hourly cap reached → the email was booked into the next window with room. Never dropped.
       await updateEmail(email.id, { status: "delayed", scheduledAt: new Date(r.slotAt), rescheduleCount: email.rescheduleCount + 1 });
-      logger.info({ emailId, limitedBy: r.limitedBy, runAt: new Date(r.slotAt).toISOString() }, "hourly limit hit – rescheduled");
+      logger.info({ emailId, limitedBy: r.limitedBy, runAt: new Date(r.slotAt).toISOString() }, "hourly limit hit - rescheduled");
       const { limit, label } = scopeInfo(r.limitedBy, email, sender, job.data);
       void notifyRateLimitHit({ userId: email.userId, scope: r.limitedBy, scopeLabel: label, limit, windowId: hourWindowId(now), resumesAt: new Date(r.slotAt) });
     }
@@ -147,7 +147,7 @@ async function processEmail(job: Job<EmailJobData>, token?: string) {
       messageId: info.messageId,
       previewUrl: (nodemailer.getTestMessageUrl(info) || null) as string | null,
     });
-    logger.info({ emailId, to: claimed.toEmail, sender: sender.email }, "✉️  sent");
+    logger.info({ emailId, to: claimed.toEmail, sender: sender.email }, "sent");
     return { sent: true };
   } catch (err) {
     const message = (err as Error).message;
@@ -219,7 +219,7 @@ export function startEmailWorker() {
       perSenderHourly: env.MAX_EMAILS_PER_HOUR_PER_SENDER,
       globalHourly: env.MAX_EMAILS_PER_HOUR,
     },
-    "📬 email worker started",
+    "email worker started",
   );
   return worker;
 }

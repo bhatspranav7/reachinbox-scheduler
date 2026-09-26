@@ -59,5 +59,5 @@ export async function reconcilePendingEmails() {
     }
   }
   if (missing.length) await enqueueEmails(missing);
-  logger.info({ pending: pending.length, reEnqueued: missing.length, retried }, "🔁 startup reconciliation done");
+  logger.info({ pending: pending.length, reEnqueued: missing.length, retried }, "startup reconciliation done");
 }

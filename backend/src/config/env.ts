@@ -14,8 +14,8 @@ const schema = z.object({
   /** Public URL of this backend (used for the Slack OAuth redirect). */
   BACKEND_PUBLIC_URL: z.string().default("http://localhost:4000"),
 
-  DATABASE_URL: z.string().default("postgresql://postgres:postgres@localhost:5432/reachinbox"),
-  REDIS_URL: z.string().default("redis://localhost:6379"),
+  DATABASE_URL: z.string().default("postgresql://postgres:postgres@localhost:55432/reachinbox"),
+  REDIS_URL: z.string().default("redis://localhost:56379"),
   ELASTICSEARCH_URL: z.string().default("http://localhost:9200"),
   ELASTICSEARCH_INDEX: z.string().default("emails"),
 

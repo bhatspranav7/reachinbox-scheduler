@@ -48,7 +48,7 @@ export async function initSearch() {
     logger.info("Elasticsearch connected");
   } catch (err) {
     available = false;
-    logger.warn({ err: (err as Error).message }, "Elasticsearch unavailable – search will fall back to Postgres");
+    logger.warn({ err: (err as Error).message }, "Elasticsearch unavailable - search will fall back to Postgres");
   }
 }
 
@@ -117,7 +117,7 @@ export async function searchEmailIds(p: SearchParams): Promise<{ ids: string[]; 
     const total = typeof res.hits.total === "number" ? res.hits.total : (res.hits.total?.value ?? 0);
     return { ids: res.hits.hits.map((h) => h._id as string), total };
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "Elasticsearch search failed – falling back");
+    logger.warn({ err: (err as Error).message }, "Elasticsearch search failed - falling back");
     return null;
   }
 }

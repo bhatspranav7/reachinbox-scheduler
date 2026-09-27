@@ -23,7 +23,7 @@ export const authOptions: NextAuthOptions = {
         try {
           const res = await fetch(`${API_URL}/api/auth/google`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1" },
             body: JSON.stringify({ idToken: account.id_token }),
           });
           if (!res.ok) throw new Error(`backend auth failed (${res.status})`);

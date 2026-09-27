@@ -2,6 +2,10 @@
 
 [![CI](https://github.com/bhatspranav7/reachinbox-scheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/bhatspranav7/reachinbox-scheduler/actions/workflows/ci.yml)
 
+**🌐 Live frontend:** https://reachinbox-scheduler-hazel.vercel.app (the API runs on my machine via an ngrok tunnel, so it works while that is online; see Quick start to run everything locally)
+
+**🎬 Demo video (≤ 5 min):** https://drive.google.com/file/d/13acw7zunDpoFbCEQ-JH8wje5_MauANv7/view?usp=sharing
+
 A production-style email scheduler: an **Express + TypeScript** API that stores campaigns in **PostgreSQL**, schedules every email as a **BullMQ delayed job** on **Redis** (no cron anywhere), sends through **Ethereal SMTP** from a pool of senders, enforces **per-sender / per-campaign / global hourly limits** with Redis counters, alerts the user on **Slack** (real OAuth) when a limit is hit, indexes everything in **Elasticsearch** and ships with a live **Bull Board** queue dashboard. The **Next.js + Tailwind** dashboard has real **Google login**, a compose flow with CSV upload, and live Scheduled / Sent tables.
 
 ```

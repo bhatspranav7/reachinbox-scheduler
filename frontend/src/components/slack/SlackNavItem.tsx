@@ -37,7 +37,7 @@ export function SlackNavItem() {
     if (!s) return;
     if (s === "connected") toast.success("Slack connected – you'll get alerts when a limit is hit");
     else if (s === "denied") toast.info("Slack connection was cancelled");
-    else toast.error(`Slack connection failed${params.get("reason") ? `: ${params.get("reason")}` : ""}`);
+    else toast.error(`Slack connection failed${params.get("reason") ? `: ${params.get("reason")!.replace(/_/g, " ")}` : ""}`);
     void mutate();
     const tab = params.get("tab");
     router.replace(tab ? `/dashboard?tab=${tab}` : "/dashboard");

@@ -15,6 +15,7 @@ export async function apiFetch<T>(path: string, token: string | undefined, init:
     ...init,
     headers: {
       "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "1",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },

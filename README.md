@@ -1,14 +1,18 @@
 # ReachInbox – Full-stack Email Job Scheduler
 
+[![CI](https://github.com/bhatspranav7/reachinbox-scheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/bhatspranav7/reachinbox-scheduler/actions/workflows/ci.yml)
+
 A production-style email scheduler: an **Express + TypeScript** API that stores campaigns in **PostgreSQL**, schedules every email as a **BullMQ delayed job** on **Redis** (no cron anywhere), sends through **Ethereal SMTP** from a pool of senders, enforces **per-sender / per-campaign / global hourly limits** with Redis counters, alerts the user on **Slack** (real OAuth) when a limit is hit, indexes everything in **Elasticsearch** and ships with a live **Bull Board** queue dashboard. The **Next.js + Tailwind** dashboard has real **Google login**, a compose flow with CSV upload, and live Scheduled / Sent tables.
 
 ```
 reachinbox-scheduler/
-├── docker-compose.yml        Postgres · Redis (AOF) · Elasticsearch
+├── docker-compose.yml        Postgres · Redis (AOF) · Elasticsearch  (+ API / worker / frontend with --profile app)
+├── .github/workflows/ci.yml  typecheck + tests (real Postgres & Redis) + builds on every push
 ├── sample-leads.csv
 ├── backend/                  Express API + BullMQ worker (TypeScript)
 │   ├── drizzle/              SQL migrations (applied automatically on boot)
 │   ├── scripts/load-test.ts  schedules 1000 emails at once and reports the spread
+│   ├── test/                 Vitest: rate limiter + end-to-end scheduler tests
 │   └── src/
 │       ├── config/env.ts     every tunable, validated with zod
 │       ├── db/               Drizzle schema + client + migrator
@@ -58,6 +62,38 @@ npm run dev                          # http://localhost:3000
 
 Migrations run automatically on startup (`npm run db:migrate` also works).
 To run API and worker as separate processes: `npm run dev:api` + `npm run dev:worker` (start as many workers as you like; all limits are enforced in Redis, so they stay correct across instances).
+
+### Or: run everything in Docker (one command)
+
+After creating `backend/.env` and `frontend/.env.local` as above:
+
+```bash
+docker compose --profile app up --build          # API :4000 · worker · frontend :3000 · Postgres · Redis · Elasticsearch
+docker compose --profile app up --scale worker=3 # three workers – limits stay exact because they live in Redis
+```
+
+The API and the worker run as separate containers (`RUN_WORKER=false` on the API), exactly the production split. Container-internal URLs (`postgres`, `redis`, `elasticsearch`) are set by the compose file, so the same `.env` works for both setups.
+
+### Tests
+
+```bash
+cd backend
+npm test          # needs the compose Postgres + Redis running; uses its own DB "reachinbox_test" (auto-created) and Redis DB 15
+```
+
+| Test | What it proves |
+|---|---|
+| never exceeds the hourly limit, even with 50 concurrent workers | the Lua reservation is atomic – exactly *limit* jobs per hour window, the rest land in later hours |
+| books overflow into the next free hour and keeps the original order | nothing dropped, order preserved, min gap kept inside future hours |
+| per-campaign / global limit, min-gap spacing, Slack trigger | every limit type and the "last slot" signal used for Slack |
+| sends every email exactly once – even when jobs are enqueued again | duplicate recipients removed, re-enqueue + reconciliation never double-send (checked on a real SMTP server) |
+| restart: Redis lost the jobs → reconciliation re-creates them | persistence across restarts / Redis loss |
+| hourly limit reschedules in order, never dropped | end-to-end rate limiting through the real worker |
+| hourly limit under concurrency (5 parallel jobs) | never more than the limit per hour, never dropped, whatever the timing |
+| crash mid-send → marked failed, not sent twice | at-most-once guarantee |
+| double-submitted campaign is created once | idempotency key |
+
+CI runs the same suite against Postgres 16 + Redis 7 service containers on every push.
 
 ### Google OAuth (required for login)
 1. Google Cloud Console → *APIs & Services → Credentials → Create OAuth client ID → Web application*.
@@ -196,6 +232,8 @@ All `/api/*` routes except auth callbacks need `Authorization: Bearer <token>`.
 - ✅ Elasticsearch – every row indexed on create and on every status change; fuzzy search on recipient/subject/body
 - ✅ Bull Board – `/admin/queues`
 - ✅ Validation (zod) and consistent JSON errors
+- ✅ **Automated tests** (Vitest, real Postgres + Redis + SMTP) and **GitHub Actions CI**
+- ✅ **One-command Docker run** with API and worker as separate, horizontally scalable services
 
 **Frontend**
 - ✅ **Built to the Outbox Labs Figma** (login, homepage Scheduled/Sent, email detail, compose + Send Later)
@@ -224,6 +262,7 @@ All `/api/*` routes except auth callbacks need `Authorization: Bearer <token>`.
 
 - **At-most-once on crashes.** A worker that dies *between* the SMTP send and writing `sent` leaves an unknown outcome. We mark such rows `failed` ("outcome unknown") instead of resending, because duplicates were the explicit hard constraint. Switching to at-least-once is a one-line change; the deterministic `Message-ID` lets receivers dedupe.
 - **Rate limits are counted at reservation time.** A slot booked in a future hour counts toward that hour even if the send later fails; failed sends are retried (exponential backoff, `SEND_MAX_ATTEMPTS`) and take a fresh slot. This can under-use a window slightly but never exceeds it.
+- **Order is best-effort under concurrency.** Slots are handed out in the order jobs *reach the limiter*. With `WORKER_CONCURRENCY > 1`, jobs that hit a full hour in the same millisecond can swap between two adjacent hours (found by the test suite on a Windows machine). Limits are never exceeded and nothing is dropped; with concurrency 1 the order is strict (covered by a test). A stricter ordering would need a per-campaign sequence lock, which would cost throughput.
 - **Hour windows are UTC clock hours** (fixed windows, not sliding). Simple to reason about and to show in Slack.
 - **Fairness is FIFO.** A huge campaign books a sender's capacity for the next hours; a campaign created later queues behind it on the shared senders. Per-tenant sender pools would be the next step.
 - **Lua keys are built inside the script**, which is fine for a single Redis/Sentinel; for Redis Cluster the keys would need a shared hash tag.

@@ -202,10 +202,10 @@ function scopeInfo(scope: LimitScope, email: Email, sender: Sender, data: EmailJ
   }
 }
 
-export function startEmailWorker() {
+export function startEmailWorker(opts: { concurrency?: number } = {}) {
   const worker = new Worker<EmailJobData>(EMAIL_QUEUE, processEmail, {
     connection: createRedis(),
-    concurrency: env.WORKER_CONCURRENCY,
+    concurrency: opts.concurrency ?? env.WORKER_CONCURRENCY,
     // An active job whose worker died is re-queued after this long.
     lockDuration: 30_000,
     maxStalledCount: 3,
@@ -214,7 +214,7 @@ export function startEmailWorker() {
   worker.on("error", (err) => logger.error({ err: err.message }, "worker error"));
   logger.info(
     {
-      concurrency: env.WORKER_CONCURRENCY,
+      concurrency: opts.concurrency ?? env.WORKER_CONCURRENCY,
       minDelayMs: env.MIN_DELAY_BETWEEN_EMAILS_MS,
       perSenderHourly: env.MAX_EMAILS_PER_HOUR_PER_SENDER,
       globalHourly: env.MAX_EMAILS_PER_HOUR,

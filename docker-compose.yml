@@ -1,5 +1,18 @@
-# Infra for local development: Postgres, Redis (AOF-persisted) and Elasticsearch.
-# The API/worker and the frontend run on the host with `npm run dev`.
+# Infra (always): Postgres, Redis (AOF-persisted) and Elasticsearch.
+#   docker compose up -d                      -> infra only; run backend/frontend with `npm run dev`
+#   docker compose --profile app up --build   -> the whole app in containers (API, worker, frontend)
+#   ... --scale worker=3                      -> several workers; limits stay exact (Redis-backed)
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql://postgres:postgres@postgres:5432/reachinbox
+  REDIS_URL: redis://redis:6379
+  ELASTICSEARCH_URL: http://elasticsearch:9200
+
+x-backend-deps: &backend-deps
+  postgres: { condition: service_healthy }
+  redis: { condition: service_healthy }
+  elasticsearch: { condition: service_healthy }
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -37,6 +50,47 @@ services:
       test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
       interval: 10s
       retries: 20
+
+  # ---------------- app (profile "app") ----------------
+  backend:
+    profiles: ["app"]
+    build: ./backend
+    env_file: ./backend/.env          # Google / Slack / limits; infra URLs are overridden below
+    environment:
+      <<: *backend-env
+      RUN_WORKER: "false"             # the API only; sending happens in the worker service
+    ports: ["4000:4000"]
+    depends_on: *backend-deps
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health >/dev/null || exit 1"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  worker:
+    profiles: ["app"]
+    build: ./backend
+    command: ["node", "dist/worker.js"]
+    env_file: ./backend/.env
+    environment: *backend-env
+    depends_on:
+      backend: { condition: service_healthy }   # backend runs the DB migrations first
+    restart: unless-stopped
+
+  frontend:
+    profiles: ["app"]
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000   # what the *browser* calls
+    env_file: ./frontend/.env.local   # NEXTAUTH_SECRET, Google client id/secret
+    environment:
+      API_URL: http://backend:4000    # what the Next.js *server* calls (container network)
+      NEXTAUTH_URL: http://localhost:3000
+    ports: ["3000:3000"]
+    depends_on:
+      backend: { condition: service_healthy }
+    restart: unless-stopped
 
 volumes:
   pgdata:

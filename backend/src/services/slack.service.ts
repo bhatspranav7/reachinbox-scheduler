@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { env } from "../config/env";
 import { db, schema } from "../db";
 import { redis } from "../lib/redis";
-import { logger } from "../lib/logger";
+import { logger, safeErrorMessage } from "../lib/logger";
 
 export const SLACK_SCOPES = ["incoming-webhook", "chat:write"];
 export const slackRedirectUri = () => `${env.BACKEND_PUBLIC_URL}/api/slack/oauth/callback`;
@@ -107,7 +107,7 @@ export async function notifyUser(userId: string, text: string, blocks?: unknown[
     }
     return false;
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "Slack notification failed");
+    logger.warn({ err: safeErrorMessage(err) }, "Slack notification failed");
     return false;
   }
 }

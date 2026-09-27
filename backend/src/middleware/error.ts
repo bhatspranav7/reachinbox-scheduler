@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
-import { logger } from "../lib/logger";
+import { logger, safeErrorMessage } from "../lib/logger";
 
 export class HttpError extends Error {
   constructor(
@@ -23,6 +23,6 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return res.status(400).json({ error: "Validation failed", details: err.flatten().fieldErrors });
   }
   if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
-  logger.error({ err }, "unhandled error");
+  logger.error({ err: safeErrorMessage(err), stack: (err as Error)?.stack?.split("\n").slice(1, 4).join(" | ") }, "unhandled error");
   res.status(500).json({ error: "Internal server error" });
 }

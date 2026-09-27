@@ -3,7 +3,7 @@ import { asc } from "drizzle-orm";
 import { env } from "../config/env";
 import { db, schema } from "../db";
 import type { Sender } from "../db/schema";
-import { logger } from "../lib/logger";
+import { logger, safeErrorMessage } from "../lib/logger";
 
 /**
  * Sender pool. Each sender is a separate Ethereal SMTP mailbox, so the
@@ -43,7 +43,7 @@ export async function ensureSenders(): Promise<Sender[]> {
       logger.info({ sender: acc.user }, "provisioned Ethereal sender");
       count++;
     } catch (err) {
-      logger.error({ err: (err as Error).message }, "could not create Ethereal account - set ETHEREAL_SENDERS in .env");
+      logger.error({ err: safeErrorMessage(err) }, "could not create Ethereal account - set ETHEREAL_SENDERS in .env");
       break;
     }
   }

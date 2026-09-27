@@ -4,7 +4,8 @@ import { z } from "zod";
 import { env } from "../config/env";
 import { ah, HttpError } from "../middleware/error";
 import { requireAuth } from "../middleware/auth";
-import { logger } from "../lib/logger";
+import { logger, safeErrorMessage } from "../lib/logger";
+import { userExists } from "../middleware/auth";
 import {
   buildAuthorizeUrl,
   completeOAuth,
@@ -50,13 +51,15 @@ slackRouter.get(
       return back("error", "&reason=invalid_state");
     }
 
+    if (!(await userExists(userId))) return back("error", "&reason=session_expired_sign_in_again");
+
     try {
       const conn = await completeOAuth(userId, code);
       await notifyUser(userId, `✅ ReachInbox Scheduler connected to *${conn.teamName}*${conn.channelName ? ` (${conn.channelName})` : ""}. You'll be alerted here when a sender hits its hourly limit.`);
       back("connected");
     } catch (err) {
-      logger.error({ err: (err as Error).message }, "Slack OAuth failed");
-      back("error", `&reason=${encodeURIComponent((err as Error).message)}`);
+      logger.error({ err: safeErrorMessage(err) }, "Slack OAuth failed");
+      back("error", "&reason=could_not_save_connection"); // never echo internal errors into the URL
     }
   }),
 );

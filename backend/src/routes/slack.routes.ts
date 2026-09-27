@@ -36,7 +36,7 @@ slackRouter.post(
 slackRouter.get(
   "/oauth/callback",
   ah(async (req, res) => {
-    const back = (status: string, extra = "") => res.redirect(`${env.FRONTEND_URL}/dashboard?slack=${status}${extra}`);
+    const back = (status: string, extra = "") => res.redirect(`${env.FRONTEND_URL.split(",")[0].trim()}/dashboard?slack=${status}${extra}`);
     const { code, state, error } = z
       .object({ code: z.string().optional(), state: z.string().optional(), error: z.string().optional() })
       .parse(req.query);

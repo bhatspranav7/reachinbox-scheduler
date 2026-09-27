@@ -30,7 +30,7 @@ export function createApp() {
   app.use("/admin/queues", boardGuard, board.getRouter());
 
   app.use(helmet());
-  app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
+  app.use(cors({ origin: env.FRONTEND_URL.split(",").map((o) => o.trim()), credentials: true }));
   app.use(express.json({ limit: "5mb" }));
 
   app.get("/health", async (_req, res) => {

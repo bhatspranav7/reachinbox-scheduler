@@ -112,6 +112,9 @@ export async function notifyUser(userId: string, text: string, blocks?: unknown[
   }
 }
 
+/** Slack renders <!date^…> in each reader's own timezone. */
+const slackTime = (d: Date, fmt: string) => `<!date^${Math.floor(d.getTime() / 1000)}^${fmt}|${d.toISOString()}>`;
+
 /**
  * Sends one Slack alert per (user, limit scope, hour window). With 1000 jobs
  * hitting the same limit, only the first one notifies (Redis SET NX).
@@ -134,7 +137,7 @@ export async function notifyRateLimitHit(params: {
       : params.scope === "campaign"
         ? `Campaign *${params.scopeLabel}*`
         : "The global sending pool";
-  const text = `⚠️ ${scopeText} hit its hourly limit of ${params.limit} emails. Remaining emails were rescheduled – sending resumes at ${params.resumesAt.toISOString()}.`;
+  const text = `⚠️ ${scopeText} hit its hourly limit of ${params.limit} emails. Remaining emails were rescheduled – sending resumes at ${slackTime(params.resumesAt, "{date_short_pretty} {time}")}.`;
   const sent = await notifyUser(params.userId, text, [
     { type: "header", text: { type: "plain_text", text: "⏱ Hourly send limit reached" } },
     {
@@ -142,8 +145,8 @@ export async function notifyRateLimitHit(params: {
       fields: [
         { type: "mrkdwn", text: `*Scope*\n${scopeText}` },
         { type: "mrkdwn", text: `*Limit*\n${params.limit} emails / hour` },
-        { type: "mrkdwn", text: `*Window*\n${params.windowId}:00 UTC` },
-        { type: "mrkdwn", text: `*Resumes*\n<!date^${Math.floor(params.resumesAt.getTime() / 1000)}^{date_short_pretty} {time}|${params.resumesAt.toISOString()}>` },
+        { type: "mrkdwn", text: `*Window*\n${slackTime(new Date(`${params.windowId}:00:00Z`), "{time}")} – ${slackTime(new Date(new Date(`${params.windowId}:00:00Z`).getTime() + 3_600_000), "{time}")}` },
+        { type: "mrkdwn", text: `*Resumes*\n${slackTime(params.resumesAt, "{date_short_pretty} {time}")}` },
       ],
     },
     { type: "context", elements: [{ type: "mrkdwn", text: "No emails were dropped – they were moved to the next available hour window." }] },

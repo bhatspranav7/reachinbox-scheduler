@@ -38,7 +38,7 @@ reachinbox-scheduler/
 
 ```bash
 # 1) infra
-docker compose up -d                 # postgres:5432  redis:6379  elasticsearch:9200
+docker compose up -d                 # postgres:55432  redis:56379  elasticsearch:9200
 
 # 2) backend
 cd backend

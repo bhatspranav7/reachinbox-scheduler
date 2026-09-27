@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: reachinbox
-    ports: ["5432:5432"]
+    ports: ["${POSTGRES_PORT:-55432}:5432"]  # uncommon host port so it never clashes with another Postgres (override with POSTGRES_PORT)
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -18,7 +18,7 @@ services:
     image: redis:7-alpine
     # appendonly + everysec fsync: delayed BullMQ jobs survive a Redis restart (≤1s of writes at risk)
     command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory-policy", "noeviction"]
-    ports: ["6379:6379"]
+    ports: ["${REDIS_PORT:-56379}:6379"]  # uncommon host port so it never clashes with another Redis (e.g. one inside WSL)
     volumes: [redisdata:/data]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
